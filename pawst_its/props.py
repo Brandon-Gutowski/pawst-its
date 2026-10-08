@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Brandon Gutowski
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Pawst-It data: the property group stored on Frame nodes, plus helpers."""
 
 import bpy

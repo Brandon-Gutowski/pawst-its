@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Brandon Gutowski
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Pure-Python text wrapping and editing model for Pawst-Its.
 
 Nothing in here imports bpy, so it can be unit-tested outside Blender.

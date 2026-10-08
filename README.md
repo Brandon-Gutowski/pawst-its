@@ -63,3 +63,7 @@ python3 tests/test_text_layout.py   # wrapping / caret logic, no Blender needed
 python3 tests/test_shapes.py        # every style hides the frame; no sharp corners or border
 tests/run_smoke.sh                  # builds the extension, runs it headless in an isolated Blender profile
 ```
+
+## License
+
+Pawst-Its is free software, released under the [GNU General Public License v3.0 or later](LICENSE), the same license Blender add-ons use.

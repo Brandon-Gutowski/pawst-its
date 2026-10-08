@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Brandon Gutowski
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Headless end-to-end check. Run via tests/run_smoke.sh (isolates Blender's user config).
 
 blender -b --factory-startup --python tests/smoke_blender.py -- <extension.zip> <scratch_dir>

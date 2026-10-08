@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Brandon Gutowski
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # Build the extension and run the headless smoke test against it, using a
 # throwaway Blender user-resources dir so your real config is untouched.
 set -euo pipefail

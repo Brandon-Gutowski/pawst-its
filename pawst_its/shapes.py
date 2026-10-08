@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Brandon Gutowski
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Geometry for the cat styles, as lists of (triangles, rgba) to fill.
 
 All functions take the note rectangle ``r = (x0, y0, x1, y1)`` (y up) in the
