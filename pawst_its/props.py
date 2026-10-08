@@ -15,18 +15,30 @@ STYLES = [
     ("TAIL", "Kitty Tail", "Little ears on top and a fluffy tail", 11),
 ]
 
-# (identifier, label, sRGB color, icon). Icons are Blender's colored tag icons.
+# (identifier, label, sRGB color, colored tag number). See color_icon().
 COLOR_PRESETS = [
-    ("LEMON", "Lemon", (1.00, 0.89, 0.45), "SEQUENCE_COLOR_03"),
-    ("PEACH", "Peach", (1.00, 0.74, 0.55), "SEQUENCE_COLOR_02"),
-    ("CORAL", "Coral", (1.00, 0.58, 0.56), "SEQUENCE_COLOR_01"),
-    ("PINK", "Pink", (1.00, 0.70, 0.84), "SEQUENCE_COLOR_07"),
-    ("LAVENDER", "Lavender", (0.80, 0.72, 1.00), "SEQUENCE_COLOR_06"),
-    ("SKY", "Sky", (0.62, 0.82, 1.00), "SEQUENCE_COLOR_05"),
-    ("MINT", "Mint", (0.66, 0.93, 0.76), "SEQUENCE_COLOR_04"),
-    ("LATTE", "Latte", (0.85, 0.74, 0.62), "SEQUENCE_COLOR_08"),
-    ("PAPER", "Paper", (0.95, 0.94, 0.90), "SEQUENCE_COLOR_09"),
+    ("LEMON", "Lemon", (1.00, 0.89, 0.45), "03"),
+    ("PEACH", "Peach", (1.00, 0.74, 0.55), "02"),
+    ("CORAL", "Coral", (1.00, 0.58, 0.56), "01"),
+    ("PINK", "Pink", (1.00, 0.70, 0.84), "07"),
+    ("LAVENDER", "Lavender", (0.80, 0.72, 1.00), "06"),
+    ("SKY", "Sky", (0.62, 0.82, 1.00), "05"),
+    ("MINT", "Mint", (0.66, 0.93, 0.76), "04"),
+    ("LATTE", "Latte", (0.85, 0.74, 0.62), "08"),
+    ("PAPER", "Paper", (0.95, 0.94, 0.90), "09"),
 ]
+
+_icon_cache = {}
+
+
+def color_icon(num):
+    """Blender's colored tag icon: STRIP_COLOR_NN (4.4+) or SEQUENCE_COLOR_NN (older)."""
+    if num not in _icon_cache:
+        icons = bpy.types.UILayout.bl_rna.functions["operator"].parameters["icon"].enum_items.keys()
+        _icon_cache[num] = next(
+            (name for name in (f"STRIP_COLOR_{num}", f"SEQUENCE_COLOR_{num}") if name in icons), 'NONE'
+        )
+    return _icon_cache[num]
 
 
 def _redraw(_self, context):

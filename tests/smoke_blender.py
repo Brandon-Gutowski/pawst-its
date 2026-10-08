@@ -48,6 +48,13 @@ def main():
     props = sys.modules[PKG + ".props"]
     draw = sys.modules[PKG + ".draw"]
 
+    # Every icon the UI uses must exist in this Blender (icons get renamed between versions).
+    valid_icons = set(bpy.types.UILayout.bl_rna.functions["operator"].parameters["icon"].enum_items.keys())
+    used = {props.color_icon(p[3]) for p in props.COLOR_PRESETS} | {"ADD", "INFO", "GREASEPENCIL", "FILE_TEXT"}
+    check(used <= valid_icons and "NONE" not in used, f"all UI icons exist ({sorted(used - valid_icons) or 'ok'})")
+    color_items = bpy.ops.node.pawst_it_set_color.get_rna_type().properties["preset"].enum_items
+    check(all(item.icon in valid_icons for item in color_items), "color menu icons exist")
+
     names = {}
     for kind, tree in trees().items():
         node = ops.create_note(tree, (100.0, 200.0), "hello\nworld " * 20)

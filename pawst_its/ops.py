@@ -5,7 +5,7 @@ from bpy.props import BoolProperty, EnumProperty, StringProperty
 
 from . import draw
 from .prefs import get_prefs
-from .props import COLOR_PRESETS, STYLES, TEXT_NAME, ensure_own_text, is_note, note_body, set_body
+from .props import COLOR_PRESETS, STYLES, TEXT_NAME, color_icon, ensure_own_text, is_note, note_body, set_body
 from .text_layout import TextBuffer, hit_test, next_word, prev_word
 
 # Events the editor lets through so the view can be panned/zoomed while typing.
@@ -350,7 +350,7 @@ class NODE_OT_pawst_it_set_color(bpy.types.Operator):
     bl_label = "Pawst-It Color"
     bl_options = {'REGISTER', 'UNDO'}
 
-    preset: EnumProperty(name="Color", items=[(p[0], p[1], "", p[3], i) for i, p in enumerate(COLOR_PRESETS)])
+    preset: EnumProperty(name="Color", items=[(p[0], p[1], "", color_icon(p[3]), i) for i, p in enumerate(COLOR_PRESETS)])
 
     @classmethod
     def poll(cls, context):

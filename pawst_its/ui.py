@@ -1,6 +1,6 @@
 import bpy
 
-from .props import COLOR_PRESETS, is_note, note_body
+from .props import COLOR_PRESETS, color_icon, is_note, note_body
 
 # Add > Layout menu ids across Blender versions and editors.
 LAYOUT_MENUS = (
@@ -23,8 +23,8 @@ def active_note(context):
 
 def draw_color_presets(layout):
     row = layout.row(align=True)
-    for ident, label, _color, icon in COLOR_PRESETS:
-        op = row.operator("node.pawst_it_set_color", text="", icon=icon)
+    for ident, _label, _color, num in COLOR_PRESETS:
+        op = row.operator("node.pawst_it_set_color", text="", icon=color_icon(num))
         op.preset = ident
 
 

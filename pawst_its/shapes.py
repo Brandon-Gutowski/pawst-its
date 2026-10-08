@@ -128,6 +128,45 @@ def rounded_outline(x0, y0, x1, y1, radius, thickness):
     return strip(outline(0.0), outline(thickness))
 
 
+def rounded_points(x0, y0, x1, y1, radii, n=None):
+    """Outline of a rounded rect with per-corner ``radii`` = (tl, tr, br, bl),
+    with ``n + 1`` points per corner so two outlines can be ``strip``-ed.
+
+    The default ``n`` matches ``rounded_rect``'s arcs, so the outline lies
+    exactly on that shape's edge.
+    """
+    tl, tr, br, bl = radii
+    if n is None:
+        n = _segments(max(radii))
+    pts = []
+    for (cx, cy), rad, a0 in (
+        ((x1 - tr, y1 - tr), tr, 0.0),
+        ((x0 + tl, y1 - tl), tl, math.pi / 2),
+        ((x0 + bl, y0 + bl), bl, math.pi),
+        ((x1 - br, y0 + br), br, 3 * math.pi / 2),
+    ):
+        pts += _arc_points(cx, cy, rad, a0, a0 + math.pi / 2, n)
+    return pts
+
+
+def clip_tris(tris, a, b, c):
+    """Keep the part of each triangle where a*x + b*y + c >= 0."""
+    out = []
+    for i in range(0, len(tris), 3):
+        poly = tris[i:i + 3]
+        kept = []
+        for j, p in enumerate(poly):
+            q = poly[(j + 1) % 3]
+            fp, fq = a * p[0] + b * p[1] + c, a * q[0] + b * q[1] + c
+            if fp >= 0:
+                kept.append(p)
+            if (fp >= 0) != (fq >= 0):
+                t = fp / (fp - fq)
+                kept.append((p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t))
+        out += polygon(kept) if len(kept) >= 3 else []
+    return out
+
+
 def tube(p0, p1, p2, r0, r1, steps=18):
     """Chain of tapering circles along a quadratic Bezier (fluffy tails)."""
     tris = []
@@ -270,7 +309,7 @@ def _paw(r, k):
 
 
 def _loaf(r, k):
-    """Loaf body (union of a domed top and a softly rounded base) plus ears and tail.
+    """Loaf body (a rounded rect with a big domed top) plus ears and tail.
 
     Dome corners contain the rect while R <= m_side + m_top + sqrt(2 m_side m_top).
     """
@@ -278,12 +317,12 @@ def _loaf(r, k):
     ms, mt, mb = 12 * k, 26 * k, 10 * k
     X0, Y0, X1, Y1 = x0 - ms, y0 - mb, x1 + ms, y1 + mt
     W = X1 - X0
-    Rt = min(56 * k, 0.5 * W)
-    body = rounded_rect(X0, Y0 + 8 * k, X1, Y1, Rt, (True, True, False, False))
-    body += rounded_rect(X0, Y0, X1, max(Y0 + 16 * k, Y1 - Rt), 8 * k)
+    rb = 8 * k
+    rr = min(56 * k, 0.5 * W, Y1 - Y0 - rb)
+    radii = (rr, rr, rb, rb)
+    body = polygon(rounded_points(X0, Y0, X1, Y1, radii))
 
     def surface(x):
-        rr = min(Rt, (Y1 - Y0 - 8 * k) / 2, W / 2)
         if x < X0 + rr:
             return Y1 - rr + math.sqrt(max(0.0, rr * rr - (X0 + rr - x) ** 2))
         if x > X1 - rr:
@@ -300,7 +339,7 @@ def _loaf(r, k):
         apex_x = b0 + 0.25 * bw if b0 < (X0 + X1) / 2 else b1 - 0.25 * bw
         ears.append([(b0, base), (b1, base), (apex_x, top)])
     tail = tube((X1 - 6 * k, Y0 + 6 * k), (X1 + 34 * k, Y0 - 6 * k), (X1 + 22 * k, Y0 + 30 * k), 7 * k, 4.5 * k)
-    return body, ears, tail, (X0, Y0, X1, Y1)
+    return body, ears, tail, (X0, Y0, X1, Y1, radii)
 
 
 # -- Kitty Tail ------------------------------------------------------------
@@ -385,30 +424,57 @@ def under(style, r, k, color, radius, halo_color=None):
     return layers
 
 
-# Smallest distance (note units) each body extends past the frame edge. The
-# frame-edge cover may paint up to (almost) this far out without changing the
-# cat's outline. PEEK and TAIL bodies *are* the frame rectangle.
-BODY_MARGIN = {"CAT": 16.0, "PAW": 10.0, "LOAF": 10.0, "PEEK": 0.0, "TAIL": 0.0}
-COVER_OUTSIDE = 4.5  # note units; Blender's frame drop shadow is ~3.5 units at zoom 1
+COVER_INSET = 1.5  # note units inside the frame edge, enough to hide Blender's frame outline
 
 
-def frame_edge_cover(style, r, k, radius, color, shadow_px=0.0):
-    """Paint over Blender's own frame outline, drop shadow and rectangular
-    selection outline in the note color, so only our cat shape shows.
+def _body_outline(style, r, k):
+    """The main body's rounded rect as (x0, y0, x1, y1, radii), or None when the
+    body is the frame rectangle itself (PEEK, TAIL)."""
+    if style in ("PEEK", "TAIL"):
+        return None
+    if style == "PAW":
+        (X0, Y0, X1, Y1), R, _toes = _paw(r, k)
+        return X0, Y0, X1, Y1, (R,) * 4
+    if style == "LOAF":
+        _body, _ears, _tail, outline = _loaf(r, k)
+        return outline
+    (X0, Y0, X1, Y1), R = _cat_head(r, k)
+    return X0, Y0, X1, Y1, (R,) * 4
 
-    Blender draws the frame shadow at a constant on-screen width, so the cover
-    reaches at least ``shadow_px`` pixels, but never past the body's margin.
+
+def margin_cover(style, r, k, radius, min_inset=0.0, top_inset=0.0):
+    """Everything of the cat body that lies outside the frame rectangle, plus a
+    sliver just inside its edge.
+
+    Painted on top in the note color, it hides Blender's own frame outline,
+    drop shadow and rectangular selection outline wherever they fall on the
+    shape, at any zoom, while leaving the frame interior (and any nodes on it)
+    untouched.
+
+    Blender draws its outline at a fixed on-screen width, a few pixels inside
+    the edge, so ``min_inset`` (pixels) keeps it covered when zoomed out. Text
+    is drawn after the cover, so a deeper inset never hides text.
+
+    ``top_inset`` extends the cover over the name strip at the top, hiding
+    Blender's own label there (the add-on draws the name itself).
     """
     x0, y0, x1, y1 = r
-    margin = BODY_MARGIN.get(style, BODY_MARGIN["CAT"])
-    if margin > 0.0:
-        o = min(max(COVER_OUTSIDE * k, shadow_px), (margin - 0.5) * k)
-    else:
-        o = 1.0 * k  # outline only, keep the selection halo visible
-    o = max(o, 1.0)
-    # Generous outer rounding keeps the cover's corners tucked inside the body's curve.
-    outer_radius = radius + 3.2 * o
-    return [(rounded_outline(x0 - o, y0 - o, x1 + o, y1 + o, outer_radius, o + max(1.5 * k, 1.5)), (*color, 1.0))]
+    inset = min(max(COVER_INSET * k, min_inset, 1.0), 0.25 * min(x1 - x0, y1 - y0))
+    top = min(max(inset, top_inset), (y1 - y0) - inset - 1.0)
+    outline = _body_outline(style, r, k)
+    if outline is None:
+        o = max(1.0 * k, 1.0)  # thin ring over the edge; keeps the selection halo visible
+        outline = (x0 - o, y0 - o, x1 + o, y1 + o, (radius + o,) * 4)
+    n = _segments(max(outline[4]))
+    outer = rounded_points(*outline, n=n)
+    inner = rounded_points(x0 + inset, y0 + inset, x1 - inset, y1 - top, (max(radius - inset, 0.0),) * 4, n=n)
+    tris = strip(outer, inner)
+    # Tails start inside the frame; the frame's shadow falls on their base.
+    if style == "LOAF":
+        tris += clip_tris(_loaf(r, k)[2], 1.0, 0.0, -x1)
+    elif style == "TAIL":
+        tris += clip_tris(_kitty(r, k)[1], 1.0, 0.0, -x1)
+    return tris
 
 
 def over(style, r, k, color, radius):
@@ -418,7 +484,7 @@ def over(style, r, k, color, radius):
         _b, _R, toes = _paw(r, k)
         return [(circle(cx, cy - 0.1 * tr, 0.55 * tr), mix(color, PINK, 0.6)) for cx, cy, tr in toes]
     if style == "LOAF":
-        _body, ears, _tail, (X0, Y0, _X1, _Y1) = _loaf(r, k)
+        _body, ears, _tail, (X0, Y0, _X1, _Y1, _radii) = _loaf(r, k)
         x0, _y0, x1, _y1 = r
         layers = [(polygon(shrink(ear, 0.5, -2 * k)), mix(color, PINK, 0.55)) for ear in ears]
         # Little front paws tucked under the loaf.

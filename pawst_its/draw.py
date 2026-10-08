@@ -11,7 +11,7 @@ from .text_layout import line_index, wrap
 
 FONT = 0
 PAD = 10.0  # note units between frame edge and text
-FRAME_SHADOW = 4.5  # Blender's frame drop shadow width in UI pixels (before UI scale)
+FRAME_OUTLINE = 2.5  # how far inside the edge Blender's frame/selection outline reaches, in UI pixels
 FRAME_RADIUS = 4.0  # Blender's frame corner radius (BASIS_RAD = 0.2 * widget unit), in note units
 LINE_SPACING = 1.3
 REF_SIZE = 64.0  # font size used for measuring; widths are scaled linearly from it
@@ -83,7 +83,7 @@ _DECORATED_TOP = {"PEEK": 14.0}  # paws hang over the top edge
 
 
 def header_height(node):
-    """Space at the top reserved for the frame's native label (the note name)."""
+    """Space at the top reserved for the note name (drawn by ``_draw_text``)."""
     if node.label.strip():
         return node.label_size + 12.0
     return _DECORATED_TOP.get(node.pawst_it.style, PAD)
@@ -263,7 +263,12 @@ def draw_over():
         if not px.visible(r):
             continue
         color = note_color(node)
-        _fill(shapes.frame_edge_cover(node.pawst_it.style, r, k, FRAME_RADIUS * k, color, FRAME_SHADOW * px.scale))
+        _fill([(
+            shapes.margin_cover(
+                node.pawst_it.style, r, k, FRAME_RADIUS * k, FRAME_OUTLINE * px.scale, header_height(node) * k
+            ),
+            (*color, 1.0),
+        )])
         _fill(shapes.over(node.pawst_it.style, r, k, color, FRAME_RADIUS * k))
 
         state = editing if editing is not None and editing.matches(tree, node) else None
@@ -277,8 +282,30 @@ def draw_over():
         _schedule_fit()
 
 
+def _draw_name(node, r, k, fg):
+    """The note name, centered in the header strip. Blender's own frame label is
+    hidden under the margin cover, so it can't double up or get cut off."""
+    name = node.label.strip()
+    size_px = node.label_size * k
+    if not name or size_px < MIN_TEXT_PX:
+        return
+    x0, y0, x1, y1 = r
+    blf.size(FONT, size_px)
+    width = blf.dimensions(FONT, name)[0]
+    x = (x0 + x1) / 2 - width / 2
+    y = y1 - header_height(node) * k / 2 - 0.36 * size_px
+    blf.color(FONT, *fg)
+    blf.enable(FONT, blf.CLIPPING)
+    blf.clipping(FONT, x0, y0, x1, y1)
+    for dx in (0.0, max(0.5, 0.045 * size_px)):  # faux bold, like Blender's label
+        blf.position(FONT, x + dx, y, 0)
+        blf.draw(FONT, name)
+    blf.disable(FONT, blf.CLIPPING)
+
+
 def _draw_text(node, r, k, text, lines, color, state):
     x0, y0, x1, y1 = r
+    _draw_name(node, r, k, text_color(color))
     size_px = node.pawst_it.font_size * k
     if size_px < MIN_TEXT_PX:
         return

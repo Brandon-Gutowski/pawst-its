@@ -21,7 +21,7 @@ Requires Blender 4.2 or newer.
 mkdir -p dist && blender --command extension build --source-dir pawst_its --output-dir dist
 ```
 
-Then in Blender, go to *Edit > Preferences > Get Extensions*, open the ▾ menu, choose *Install from Disk…* and pick `dist/pawst_its-2.0.0.zip`.
+Then in Blender, go to *Edit > Preferences > Get Extensions*, open the ▾ menu, choose *Install from Disk…* and pick `dist/pawst_its-2.0.1.zip`.
 
 Upgrading from "Sticky Notes" 1.x: uninstall it first (both use Shift+P). Notes in your existing files convert automatically when you open them, keeping their text, name, color and size. Retired styles become Cat Head.
 
@@ -55,7 +55,6 @@ When you save, each frame is linked to its Text. Anyone opening the file *withou
 
 Known limitations:
 - Note text is drawn on top of the canvas, so a node dragged over a note shows the note's text above it.
-- The add-on paints over Blender's own frame outline and shadow so only the cat shape shows. Zoomed far out, a hint of Blender's frame shadow can peek through on Cat Head, Paw Print and Cat Loaf.
 
 ## Tests
 
