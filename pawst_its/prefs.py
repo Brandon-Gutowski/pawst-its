@@ -4,7 +4,7 @@ from bpy.props import EnumProperty, FloatProperty, FloatVectorProperty
 from .props import COLOR_PRESETS, STYLES
 
 
-class StickyNotesPreferences(bpy.types.AddonPreferences):
+class PawstItsPreferences(bpy.types.AddonPreferences):
     bl_idname = __package__
 
     default_color: FloatVectorProperty(
@@ -15,7 +15,7 @@ class StickyNotesPreferences(bpy.types.AddonPreferences):
         max=1.0,
         default=COLOR_PRESETS[0][2],
     )
-    default_style: EnumProperty(name="Default Style", items=STYLES, default="CLASSIC")
+    default_style: EnumProperty(name="Default Style", items=STYLES, default="CAT")
     default_font_size: FloatProperty(name="Default Font Size", default=14.0, min=6.0, max=96.0)
     default_width: FloatProperty(name="Default Width", default=260.0, min=60.0, max=2000.0)
     default_height: FloatProperty(name="Default Height", default=140.0, min=40.0, max=2000.0)
@@ -37,7 +37,7 @@ class StickyNotesPreferences(bpy.types.AddonPreferences):
 
 class _Defaults:
     default_color = COLOR_PRESETS[0][2]
-    default_style = "CLASSIC"
+    default_style = "CAT"
     default_font_size = 14.0
     default_width = 260.0
     default_height = 140.0
@@ -49,8 +49,8 @@ def get_prefs():
 
 
 def register():
-    bpy.utils.register_class(StickyNotesPreferences)
+    bpy.utils.register_class(PawstItsPreferences)
 
 
 def unregister():
-    bpy.utils.unregister_class(StickyNotesPreferences)
+    bpy.utils.unregister_class(PawstItsPreferences)

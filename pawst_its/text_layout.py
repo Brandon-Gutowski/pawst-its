@@ -1,4 +1,4 @@
-"""Pure-Python text wrapping and editing model for sticky notes.
+"""Pure-Python text wrapping and editing model for Pawst-Its.
 
 Nothing in here imports bpy, so it can be unit-tested outside Blender.
 Every width is measured by a caller-supplied ``measure(str) -> float``.

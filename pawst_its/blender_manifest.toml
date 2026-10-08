@@ -1,9 +1,9 @@
 schema_version = "1.0.0"
 
-id = "sticky_notes"
-version = "1.0.0"
-name = "Sticky Notes"
-tagline = "Houdini-style sticky notes for every node editor"
+id = "pawst_its"
+version = "2.0.0"
+name = "Pawst-Its"
+tagline = "Cat-themed Pawst-Its for every node editor"
 maintainer = "Brandon Gutowski"
 type = "add-on"
 

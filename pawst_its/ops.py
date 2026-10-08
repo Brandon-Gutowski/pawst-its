@@ -44,7 +44,7 @@ def create_note(tree, location, body=""):
     for node in tree.nodes:
         node.select = False
     frame = tree.nodes.new("NodeFrame")
-    frame.name = "StickyNote"
+    frame.name = "PawstIt"
     frame.label = ""
     frame.shrink = False
     frame.label_size = 16
@@ -53,7 +53,7 @@ def create_note(tree, location, body=""):
     frame.use_custom_color = True
     frame.color = prefs.default_color
     frame.location = location
-    props = frame.sticky_note
+    props = frame.pawst_it
     props.is_note = True
     props.style = prefs.default_style
     props.font_size = prefs.default_font_size
@@ -83,11 +83,11 @@ def note_at(context, mx, my):
     return None
 
 
-class NODE_OT_sticky_note_add(bpy.types.Operator):
-    """Drop a sticky note at the mouse cursor and start typing"""
+class NODE_OT_pawst_it_add(bpy.types.Operator):
+    """Drop a Pawst-It at the mouse cursor and start typing"""
 
-    bl_idname = "node.sticky_note_add"
-    bl_label = "Sticky Note"
+    bl_idname = "node.pawst_it_add"
+    bl_label = "Pawst-It"
     bl_options = {'UNDO'}
 
     edit: BoolProperty(name="Start Typing", default=True, options={'SKIP_SAVE'})
@@ -118,15 +118,15 @@ class NODE_OT_sticky_note_add(bpy.types.Operator):
         node = create_note(space.edit_tree, location, self.text)
         if self.edit:
             with context.temp_override(region=_window_region(context.area)):
-                bpy.ops.node.sticky_note_edit('INVOKE_DEFAULT', node_name=node.name, is_new=True)
+                bpy.ops.node.pawst_it_edit('INVOKE_DEFAULT', node_name=node.name, is_new=True)
         return {'FINISHED'}
 
 
-class NODE_OT_sticky_note_edit(bpy.types.Operator):
-    """Type into a sticky note"""
+class NODE_OT_pawst_it_edit(bpy.types.Operator):
+    """Type into a Pawst-It"""
 
-    bl_idname = "node.sticky_note_edit"
-    bl_label = "Edit Sticky Note"
+    bl_idname = "node.pawst_it_edit"
+    bl_label = "Edit Pawst-It"
     bl_options = {'UNDO'}
 
     node_name: StringProperty(options={'SKIP_SAVE', 'HIDDEN'})
@@ -178,7 +178,7 @@ class NODE_OT_sticky_note_edit(bpy.types.Operator):
         draw.editing = None
         node = self._node(context)
         if node is not None and self.is_new and not self._buffer.text.strip() and not node.label:
-            text = node.sticky_note.text
+            text = node.pawst_it.text
             context.space_data.edit_tree.nodes.remove(node)
             if text is not None and text.users == 0:
                 bpy.data.texts.remove(text)
@@ -193,7 +193,7 @@ class NODE_OT_sticky_note_edit(bpy.types.Operator):
             if not is_note(node):
                 return {'CANCELLED'}
             with context.temp_override(region=_window_region(context.area)):
-                return bpy.ops.node.sticky_note_edit('INVOKE_DEFAULT', node_name=node.name)
+                return bpy.ops.node.pawst_it_edit('INVOKE_DEFAULT', node_name=node.name)
         tree = context.space_data.edit_tree
         if self.node_name:
             node = tree.nodes.get(self.node_name)
@@ -204,7 +204,7 @@ class NODE_OT_sticky_note_edit(bpy.types.Operator):
         if not is_note(node):
             if self.hovered:
                 return {'PASS_THROUGH'}
-            self.report({'WARNING'}, "No sticky note selected")
+            self.report({'WARNING'}, "No Pawst-It selected")
             return {'CANCELLED'}
         if draw.editing is not None:
             return {'CANCELLED'}
@@ -343,11 +343,11 @@ class NODE_OT_sticky_note_edit(bpy.types.Operator):
         self._finish(context)
 
 
-class NODE_OT_sticky_note_set_color(bpy.types.Operator):
-    """Set the color of the selected sticky notes"""
+class NODE_OT_pawst_it_set_color(bpy.types.Operator):
+    """Set the color of the selected Pawst-Its"""
 
-    bl_idname = "node.sticky_note_set_color"
-    bl_label = "Sticky Note Color"
+    bl_idname = "node.pawst_it_set_color"
+    bl_label = "Pawst-It Color"
     bl_options = {'REGISTER', 'UNDO'}
 
     preset: EnumProperty(name="Color", items=[(p[0], p[1], "", p[3], i) for i, p in enumerate(COLOR_PRESETS)])
@@ -364,11 +364,11 @@ class NODE_OT_sticky_note_set_color(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class NODE_OT_sticky_note_set_style(bpy.types.Operator):
-    """Set the frame style of the selected sticky notes"""
+class NODE_OT_pawst_it_set_style(bpy.types.Operator):
+    """Set the frame style of the selected Pawst-Its"""
 
-    bl_idname = "node.sticky_note_set_style"
-    bl_label = "Sticky Note Style"
+    bl_idname = "node.pawst_it_set_style"
+    bl_label = "Pawst-It Style"
     bl_options = {'REGISTER', 'UNDO'}
 
     style: EnumProperty(name="Style", items=STYLES)
@@ -379,15 +379,15 @@ class NODE_OT_sticky_note_set_style(bpy.types.Operator):
 
     def execute(self, context):
         for node in selected_notes(context):
-            node.sticky_note.style = self.style
+            node.pawst_it.style = self.style
         return {'FINISHED'}
 
 
 classes = (
-    NODE_OT_sticky_note_add,
-    NODE_OT_sticky_note_edit,
-    NODE_OT_sticky_note_set_color,
-    NODE_OT_sticky_note_set_style,
+    NODE_OT_pawst_it_add,
+    NODE_OT_pawst_it_edit,
+    NODE_OT_pawst_it_set_color,
+    NODE_OT_pawst_it_set_style,
 )
 
 

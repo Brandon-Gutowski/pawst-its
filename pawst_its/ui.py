@@ -24,15 +24,15 @@ def active_note(context):
 def draw_color_presets(layout):
     row = layout.row(align=True)
     for ident, label, _color, icon in COLOR_PRESETS:
-        op = row.operator("node.sticky_note_set_color", text="", icon=icon)
+        op = row.operator("node.pawst_it_set_color", text="", icon=icon)
         op.preset = ident
 
 
-class NODE_PT_sticky_note(bpy.types.Panel):
+class NODE_PT_pawst_it(bpy.types.Panel):
     bl_space_type = 'NODE_EDITOR'
     bl_region_type = 'UI'
-    bl_category = "Sticky Note"
-    bl_label = "Sticky Note"
+    bl_category = "Pawst-Its"
+    bl_label = "Pawst-It"
 
     @classmethod
     def poll(cls, context):
@@ -42,12 +42,12 @@ class NODE_PT_sticky_note(bpy.types.Panel):
         layout = self.layout
         node = active_note(context)
         if node is None:
-            layout.operator("node.sticky_note_add", text="Add Sticky Note", icon='ADD')
+            layout.operator("node.pawst_it_add", text="Add Pawst-It", icon='ADD')
             layout.label(text="Shift+P over the canvas", icon='INFO')
             return
 
-        props = node.sticky_note
-        layout.operator("node.sticky_note_edit", text="Edit Text", icon='GREASEPENCIL')
+        props = node.pawst_it
+        layout.operator("node.pawst_it_edit", text="Edit Text", icon='GREASEPENCIL')
 
         col = layout.column()
         col.use_property_split = True
@@ -80,18 +80,18 @@ class NODE_PT_sticky_note(bpy.types.Panel):
                 col.label(text="…")
 
 
-class NODE_MT_sticky_note_style(bpy.types.Menu):
+class NODE_MT_pawst_it_style(bpy.types.Menu):
     bl_label = "Style"
 
     def draw(self, _context):
-        self.layout.operator_enum("node.sticky_note_set_style", "style")
+        self.layout.operator_enum("node.pawst_it_set_style", "style")
 
 
-class NODE_MT_sticky_note_color(bpy.types.Menu):
+class NODE_MT_pawst_it_color(bpy.types.Menu):
     bl_label = "Color"
 
     def draw(self, _context):
-        self.layout.operator_enum("node.sticky_note_set_color", "preset")
+        self.layout.operator_enum("node.pawst_it_set_color", "preset")
 
 
 def draw_context_menu(self, context):
@@ -99,16 +99,16 @@ def draw_context_menu(self, context):
         return
     layout = self.layout
     layout.separator()
-    layout.operator("node.sticky_note_edit", text="Edit Sticky Note", icon='GREASEPENCIL')
-    layout.menu("NODE_MT_sticky_note_style")
-    layout.menu("NODE_MT_sticky_note_color")
+    layout.operator("node.pawst_it_edit", text="Edit Pawst-It", icon='GREASEPENCIL')
+    layout.menu("NODE_MT_pawst_it_style")
+    layout.menu("NODE_MT_pawst_it_color")
 
 
 def draw_add_menu(self, _context):
-    self.layout.operator("node.sticky_note_add", text="Sticky Note", icon='FILE_TEXT')
+    self.layout.operator("node.pawst_it_add", text="Pawst-It", icon='FILE_TEXT')
 
 
-classes = (NODE_PT_sticky_note, NODE_MT_sticky_note_style, NODE_MT_sticky_note_color)
+classes = (NODE_PT_pawst_it, NODE_MT_pawst_it_style, NODE_MT_pawst_it_color)
 
 
 def _layout_menus():

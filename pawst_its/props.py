@@ -1,17 +1,18 @@
-"""Sticky note data: the property group stored on Frame nodes, plus helpers."""
+"""Pawst-It data: the property group stored on Frame nodes, plus helpers."""
 
 import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty
 
-TEXT_NAME = ".StickyNote"  # leading dot hides it from most ID pickers
+TEXT_NAME = ".PawstIt"  # leading dot hides it from most ID pickers
 
+# Explicit numbers: enum values are stored as ints, so they must never shift.
+# 0-6 were the pre-cat styles (removed); notes still holding them render as Cat Head.
 STYLES = [
-    ("CLASSIC", "Classic", "Plain note with a soft shadow and a glue strip"),
-    ("PUSHPIN", "Pushpin", "Pinned to the board with a round pushpin"),
-    ("TAPE", "Washi Tape", "Held up by two strips of washi tape"),
-    ("DOGEAR", "Dog-Ear", "Bottom-right corner folded over"),
-    ("BUBBLE", "Speech Bubble", "Speech bubble with a tail"),
-    ("CLOUD", "Thought Cloud", "Fluffy thought cloud"),
+    ("CAT", "Cat Head", "Cat head with pointy ears and whiskers", 7),
+    ("PEEK", "Peeking Cat", "A black cat peeking over the top edge", 8),
+    ("PAW", "Paw Print", "Chubby paw pad with four toe beans", 9),
+    ("LOAF", "Cat Loaf", "A cat loaf with a curled-up tail", 10),
+    ("TAIL", "Kitty Tail", "Little ears on top and a fluffy tail", 11),
 ]
 
 # (identifier, label, sRGB color, icon). Icons are Blender's colored tag icons.
@@ -45,10 +46,10 @@ def _refit(self, context):
     _redraw(self, context)
 
 
-class StickyNoteProps(bpy.types.PropertyGroup):
-    is_note: BoolProperty(name="Is Sticky Note", default=False)
+class PawstItProps(bpy.types.PropertyGroup):
+    is_note: BoolProperty(name="Is Pawst-It", default=False)
     text: PointerProperty(name="Text", type=bpy.types.Text)
-    style: EnumProperty(name="Style", items=STYLES, default="CLASSIC", update=_redraw)
+    style: EnumProperty(name="Style", items=STYLES, default="CAT", update=_redraw)
     font_size: FloatProperty(
         name="Font Size", default=14.0, min=6.0, max=96.0, soft_max=48.0, update=_refit
     )
@@ -61,16 +62,16 @@ class StickyNoteProps(bpy.types.PropertyGroup):
 
 
 def owner_node(props):
-    """The Frame node a StickyNoteProps instance belongs to."""
+    """The Frame node a PawstItProps instance belongs to."""
     ptr = props.as_pointer()
     for node in getattr(props.id_data, "nodes", ()):
-        if node.bl_idname == "NodeFrame" and node.sticky_note.as_pointer() == ptr:
+        if node.bl_idname == "NodeFrame" and node.pawst_it.as_pointer() == ptr:
             return node
     return None
 
 
 def is_note(node):
-    return node is not None and node.bl_idname == "NodeFrame" and node.sticky_note.is_note
+    return node is not None and node.bl_idname == "NodeFrame" and node.pawst_it.is_note
 
 
 def iter_node_trees():
@@ -97,18 +98,18 @@ def iter_notes():
 
 
 def note_body(node):
-    text = node.sticky_note.text
+    text = node.pawst_it.text
     return text.as_string() if text is not None else ""
 
 
 def ensure_own_text(node):
     """Return a Text used by this note only; copy-on-write after node duplication."""
-    props = node.sticky_note
+    props = node.pawst_it
     text = props.text
     if text is None:
         text = bpy.data.texts.new(TEXT_NAME)
     elif text.library is not None or any(
-        other.sticky_note.text == text for _tree, other in iter_notes() if other != node
+        other.pawst_it.text == text for _tree, other in iter_notes() if other != node
     ):
         text = text.copy()
     if props.text != text:
@@ -117,7 +118,7 @@ def ensure_own_text(node):
 
 
 def set_body(node, body):
-    text = node.sticky_note.text or ensure_own_text(node)
+    text = node.pawst_it.text or ensure_own_text(node)
     if text.as_string() != body:
         text.from_string(body)
 
@@ -128,7 +129,7 @@ def attach_fallback_text(attach):
     for _tree, node in iter_notes():
         if node.id_data.library is not None:
             continue
-        want = node.sticky_note.text if attach else None
+        want = node.pawst_it.text if attach else None
         if node.text != want:
             try:
                 node.text = want
@@ -136,11 +137,36 @@ def attach_fallback_text(attach):
                 pass
 
 
+LEGACY_PROP = "sticky_note"  # v1 name of the property group, from "Sticky Notes"
+
+
+def migrate_legacy():
+    """Convert notes saved by v1 ("Sticky Notes") into Pawst-Its."""
+    style_ids = {num: ident for ident, _name, _desc, num in STYLES}
+    for tree in iter_node_trees():
+        if tree.library is not None:
+            continue
+        for node in tree.nodes:
+            if node.bl_idname != "NodeFrame":
+                continue
+            legacy = node.get(LEGACY_PROP)
+            if legacy is None:
+                continue
+            if legacy.get("is_note"):
+                props = node.pawst_it
+                props.is_note = True
+                props.text = legacy.get("text")
+                props.font_size = legacy.get("font_size", props.font_size)
+                props.auto_height = bool(legacy.get("auto_height", True))
+                props.style = style_ids.get(legacy.get("style"), "CAT")
+            del node[LEGACY_PROP]
+
+
 def register():
-    bpy.utils.register_class(StickyNoteProps)
-    bpy.types.NodeFrame.sticky_note = PointerProperty(type=StickyNoteProps)
+    bpy.utils.register_class(PawstItProps)
+    bpy.types.NodeFrame.pawst_it = PointerProperty(type=PawstItProps)
 
 
 def unregister():
-    del bpy.types.NodeFrame.sticky_note
-    bpy.utils.unregister_class(StickyNoteProps)
+    del bpy.types.NodeFrame.pawst_it
+    bpy.utils.unregister_class(PawstItProps)

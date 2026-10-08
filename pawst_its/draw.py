@@ -1,4 +1,4 @@
-"""Drawing of sticky notes in every node editor, plus layout/geometry helpers."""
+"""Drawing of Pawst-Its in every node editor, plus layout/geometry helpers."""
 
 import blf
 import bpy
@@ -11,9 +11,12 @@ from .text_layout import line_index, wrap
 
 FONT = 0
 PAD = 10.0  # note units between frame edge and text
+FRAME_SHADOW = 4.5  # Blender's frame drop shadow width in UI pixels (before UI scale)
+FRAME_RADIUS = 4.0  # Blender's frame corner radius (BASIS_RAD = 0.2 * widget unit), in note units
 LINE_SPACING = 1.3
 REF_SIZE = 64.0  # font size used for measuring; widths are scaled linearly from it
 MIN_TEXT_PX = 3.0
+EDIT_ACCENT = (0.33, 0.62, 1.0, 1.0)
 
 # Set by the edit operator while a note is being typed into.
 editing = None
@@ -76,18 +79,18 @@ def note_rect_view(node, scale):
 
 
 # Styles whose decorations sit over the top edge need room above the text.
-_DECORATED_TOP = {"PUSHPIN": 22.0, "TAPE": 20.0}
+_DECORATED_TOP = {"PEEK": 14.0}  # paws hang over the top edge
 
 
 def header_height(node):
     """Space at the top reserved for the frame's native label (the note name)."""
     if node.label.strip():
         return node.label_size + 12.0
-    return _DECORATED_TOP.get(node.sticky_note.style, PAD)
+    return _DECORATED_TOP.get(node.pawst_it.style, PAD)
 
 
 def line_height(node):
-    return node.sticky_note.font_size * LINE_SPACING
+    return node.pawst_it.font_size * LINE_SPACING
 
 
 def text_color(color):
@@ -125,7 +128,7 @@ def layout(node, text=None):
     """Wrapped lines (in note units) for a note. Returns (text, lines, measure)."""
     if text is None:
         text = note_body(node)
-    size = node.sticky_note.font_size
+    size = node.pawst_it.font_size
     width = max(1.0, node.width - 2 * PAD)
     measure = measure_fn(size)
     key = (text, round(width, 2), size)
@@ -143,7 +146,7 @@ def fitted_height(node, text=None):
 
 
 def fit_height(node, text=None):
-    if node.sticky_note.auto_height:
+    if node.pawst_it.auto_height:
         h = fitted_height(node, text)
         if abs(node.height - h) > 0.5:
             node.height = h
@@ -176,6 +179,7 @@ def _schedule_fit():
 
 def _fill(layers):
     shader = gpu.shader.from_builtin('UNIFORM_COLOR')
+    gpu.state.blend_set('ALPHA')  # blf drawing resets blending, so set it every time
     for tris, rgba in layers:
         if not tris:
             continue
@@ -221,16 +225,25 @@ def draw_under():
     """BACKDROP pass (after the grid, before nodes), in region pixels:
     the solid body plus anything that sticks out of the frame."""
     context = bpy.context
-    _tree, notes = _visible_notes(context)
+    tree, notes = _visible_notes(context)
     if not notes:
         return
     _measure_scale(notes)
     px = _PixelSpace(context.region)
+    theme = context.preferences.themes[0].node_editor
+    active = tree.nodes.active
     gpu.state.blend_set('ALPHA')
     for node in notes:
         r = px.rect(node)
-        if px.visible(r):
-            _fill(shapes.under(node.sticky_note.style, r, px.k, note_color(node)))
+        if not px.visible(r):
+            continue
+        if editing is not None and editing.matches(tree, node):
+            halo = EDIT_ACCENT
+        elif node.select:
+            halo = (*tuple(theme.node_active if node == active else theme.node_selected)[:3], 1.0)
+        else:
+            halo = None
+        _fill(shapes.under(node.pawst_it.style, r, px.k, note_color(node), FRAME_RADIUS * px.k, halo))
     gpu.state.blend_set('NONE')
 
 
@@ -242,7 +255,6 @@ def draw_over():
         return
     px = _PixelSpace(context.region)
     k = px.k
-    background = tuple(context.preferences.themes[0].node_editor.space.back)[:3]
 
     gpu.state.blend_set('ALPHA')
     needs_fit = False
@@ -251,37 +263,23 @@ def draw_over():
         if not px.visible(r):
             continue
         color = note_color(node)
-        _fill(shapes.over(node.sticky_note.style, r, k, color, background))
+        _fill(shapes.frame_edge_cover(node.pawst_it.style, r, k, FRAME_RADIUS * k, color, FRAME_SHADOW * px.scale))
+        _fill(shapes.over(node.pawst_it.style, r, k, color, FRAME_RADIUS * k))
 
         state = editing if editing is not None and editing.matches(tree, node) else None
         text = state.buffer.text if state else None
         text, lines, _m = layout(node, text)
-        if state is None and node.sticky_note.auto_height and abs(node.height - fitted_height(node, text)) > 0.5:
+        if state is None and node.pawst_it.auto_height and abs(node.height - fitted_height(node, text)) > 0.5:
             needs_fit = True
         _draw_text(node, r, k, text, lines, color, state)
-        if state is not None:
-            _draw_edit_outline(r, k)
     gpu.state.blend_set('NONE')
     if needs_fit:
         _schedule_fit()
 
 
-def _draw_edit_outline(r, k):
-    x0, y0, x1, y1 = r
-    t = max(1.5, 1.5 * k)
-    o = 3 * k
-    accent = (0.33, 0.62, 1.0, 0.95)
-    _fill([
-        (shapes.rect(x0 - o, y1 + o - t, x1 + o, y1 + o), accent),
-        (shapes.rect(x0 - o, y0 - o, x1 + o, y0 - o + t), accent),
-        (shapes.rect(x0 - o, y0 - o, x0 - o + t, y1 + o), accent),
-        (shapes.rect(x1 + o - t, y0 - o, x1 + o, y1 + o), accent),
-    ])
-
-
 def _draw_text(node, r, k, text, lines, color, state):
     x0, y0, x1, y1 = r
-    size_px = node.sticky_note.font_size * k
+    size_px = node.pawst_it.font_size * k
     if size_px < MIN_TEXT_PX:
         return
     line_px = line_height(node) * k

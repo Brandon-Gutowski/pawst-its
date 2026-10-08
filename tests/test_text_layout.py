@@ -1,7 +1,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "sticky_notes"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "pawst_its"))
 
 from text_layout import (  # noqa: E402
     Line,

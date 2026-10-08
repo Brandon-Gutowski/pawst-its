@@ -9,7 +9,7 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 "$BLENDER" --factory-startup --command extension build \
-    --source-dir "$ROOT/sticky_notes" --output-dir "$WORK" >/dev/null
+    --source-dir "$ROOT/pawst_its" --output-dir "$WORK" >/dev/null
 ZIP="$(ls "$WORK"/*.zip)"
 
 BLENDER_USER_RESOURCES="$WORK/user" "$BLENDER" -b --factory-startup \

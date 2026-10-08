@@ -10,7 +10,7 @@ import traceback
 import bpy
 
 zip_path, scratch = sys.argv[sys.argv.index("--") + 1:][:2]
-PKG = "bl_ext.user_default.sticky_notes"
+PKG = "bl_ext.user_default.pawst_its"
 failures = []
 
 
@@ -52,22 +52,22 @@ def main():
     for kind, tree in trees().items():
         node = ops.create_note(tree, (100.0, 200.0), "hello\nworld " * 20)
         names[kind] = (tree.name, node.name)
-        check(node.bl_idname == "NodeFrame" and props.is_note(node), f"{kind}: note is a sticky Frame")
+        check(node.bl_idname == "NodeFrame" and props.is_note(node), f"{kind}: note is a Pawst-It Frame")
         check(props.note_body(node).startswith("hello\nworld"), f"{kind}: body stored in Text")
-        check(node.sticky_note.text.name.startswith(".StickyNote"), f"{kind}: hidden Text name")
+        check(node.pawst_it.text.name.startswith(".PawstIt"), f"{kind}: hidden Text name")
         check(node.text is None, f"{kind}: frame.text detached during session")
         check(not node.shrink and node.use_custom_color, f"{kind}: frame configured")
         check(tuple(node.location) == (100.0, 200.0), f"{kind}: placed at location")
         check(node.height > 140.0, f"{kind}: auto height grew to fit text ({node.height:.0f})")
         node.label = f"{kind} note"
-        node.sticky_note.style = "CLOUD"
+        node.pawst_it.style = {"shader": "PEEK", "geometry": "PAW", "compositor": "LOAF"}[kind]
 
     # Copy-on-write when two notes share a Text (as after Shift+D).
     gn = bpy.data.node_groups["SmokeGN"]
     a = gn.nodes[names["geometry"][1]]
     b = ops.create_note(gn, (500.0, 0.0))
-    shared = a.sticky_note.text
-    b.sticky_note.text = shared
+    shared = a.pawst_it.text
+    b.pawst_it.text = shared
     own = props.ensure_own_text(b)
     check(own != shared and own.as_string() == shared.as_string(), "duplicate note gets its own Text copy")
     props.set_body(b, "changed")
@@ -77,6 +77,14 @@ def main():
     text, lines, _m = draw.layout(a)
     check(len(lines) > 3, f"long text wraps ({len(lines)} lines)")
 
+    # A note as saved by v1 ("Sticky Notes"): raw ID-property group + frame.text.
+    legacy_text = bpy.data.texts.new(".StickyNote")
+    legacy_text.from_string("legacy note")
+    old = gn.nodes.new("NodeFrame")
+    old.name = "OldNote"
+    old.text = legacy_text
+    old["sticky_note"] = {"is_note": True, "text": legacy_text, "font_size": 18.0, "auto_height": True, "style": 5}
+
     path = os.path.join(scratch, "smoke.blend")
     bpy.ops.wm.save_as_mainfile(filepath=path)
     check(all(n.text is None for _t, n in props.iter_notes()), "frame.text detached again after save")
@@ -85,7 +93,7 @@ def main():
     bpy.ops.preferences.addon_disable(module=PKG)
     bpy.ops.wm.open_mainfile(filepath=path)
     frames = [n for t in props.iter_node_trees() for n in t.nodes if n.bl_idname == "NodeFrame"]
-    check(len(frames) == 4, f"4 frames in saved file ({len(frames)})")
+    check(len(frames) == 5, f"5 frames in saved file ({len(frames)})")
     check(all(f.text is not None and f.text.as_string() for f in frames), "fallback: every frame has its Text")
     labels = sorted(f.label for f in frames)
     check("shader note" in labels and "compositor note" in labels, "names saved as frame labels")
@@ -95,9 +103,15 @@ def main():
     bpy.ops.wm.open_mainfile(filepath=path)
     props = sys.modules[PKG + ".props"]
     notes = list(props.iter_notes())
-    check(len(notes) == 4, f"4 notes after reload ({len(notes)})")
+    check(len(notes) == 5, f"5 notes after reload, incl. migrated v1 note ({len(notes)})")
     check(all(n.text is None for _t, n in notes), "frames detached on load with add-on")
-    check(any(n.sticky_note.style == "CLOUD" for _t, n in notes), "style persisted")
+    styles = {n.pawst_it.style for _t, n in notes}
+    check({"PEEK", "PAW", "LOAF", "CAT"} <= styles, f"styles persisted ({sorted(styles)})")
+
+    old = bpy.data.node_groups["SmokeGN"].nodes["OldNote"]
+    check(props.is_note(old) and props.note_body(old) == "legacy note", "v1 note migrated with its text")
+    check(old.pawst_it.font_size == 18.0 and old.pawst_it.style == "CAT", "v1 font size kept, retired style -> Cat Head")
+    check("sticky_note" not in old.keys(), "v1 property group removed")
 
     bpy.ops.preferences.addon_disable(module=PKG)
     check(all(n.text is not None for _t, n in notes), "disabling the add-on reattaches fallback text")
