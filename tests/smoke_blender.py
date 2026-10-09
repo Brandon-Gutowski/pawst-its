@@ -71,6 +71,9 @@ def main():
         check(tuple(node.location) == (100.0, 200.0), f"{kind}: placed at location")
         check(node.height > 140.0, f"{kind}: auto height grew to fit text ({node.height:.0f})")
         node.label = f"{kind} note"
+        if kind == "shader":
+            node.pawst_it.use_stroke = True
+            node.pawst_it.stroke_color = (0.2, 0.9, 0.4)
         node.pawst_it.style = {"shader": "PEEK", "geometry": "PAW", "compositor": "LOAF"}[kind]
 
     # Copy-on-write when two notes share a Text (as after Shift+D).
@@ -116,6 +119,9 @@ def main():
     notes = list(props.iter_notes())
     check(len(notes) == 5, f"5 notes after reload, incl. migrated v1 note ({len(notes)})")
     check(all(n.text is None for _t, n in notes), "frames detached on load with add-on")
+    stroked = [n for _t, n in notes if n.pawst_it.use_stroke]
+    check(len(stroked) == 1 and tuple(round(c, 3) for c in stroked[0].pawst_it.stroke_color) == (0.2, 0.9, 0.4),
+          "stroke toggle and color persisted")
     styles = {n.pawst_it.style for _t, n in notes}
     check({"PEEK", "PAW", "LOAF", "CAT"} <= styles, f"styles persisted ({sorted(styles)})")
 

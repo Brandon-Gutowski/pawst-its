@@ -327,6 +327,8 @@ def draw_notes():
             halo = EDIT_ACCENT
         elif node.select:
             halo = (*tuple(theme.node_active if node == active else theme.node_selected)[:3], 1.0)
+        elif node.pawst_it.use_stroke:  # same outline as selection, in the note's stroke color
+            halo = (*tuple(node.pawst_it.stroke_color), 1.0)
         else:
             halo = None
         _fill(shapes.under(style, r, k, color, radius, halo, shadow=not shadow_done))

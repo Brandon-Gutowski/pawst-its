@@ -64,6 +64,13 @@ class NODE_PT_pawst_it(bpy.types.Panel):
         col = layout.column()
         col.use_property_split = True
         col.use_property_decorate = False
+        col.prop(props, "use_stroke")
+        if props.use_stroke:
+            col.prop(props, "stroke_color", text="Stroke Color")
+
+        col = layout.column()
+        col.use_property_split = True
+        col.use_property_decorate = False
         col.prop(props, "font_size")
         col.prop(node, "label_size", text="Name Size")
         col.prop(node, "width")

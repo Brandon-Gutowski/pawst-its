@@ -5,7 +5,7 @@
 """Pawst-It data: the property group stored on Frame nodes, plus helpers."""
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty
+from bpy.props import BoolProperty, EnumProperty, FloatProperty, FloatVectorProperty, PointerProperty
 
 TEXT_NAME = ".PawstIt"  # leading dot hides it from most ID pickers
 
@@ -74,6 +74,21 @@ class PawstItProps(bpy.types.PropertyGroup):
         description="Grow and shrink the note to fit its text",
         default=True,
         update=_refit,
+    )
+    use_stroke: BoolProperty(
+        name="Stroke",
+        description="Outline the whole note, so it stands out on any theme",
+        default=False,
+        update=_redraw,
+    )
+    stroke_color: FloatVectorProperty(
+        name="Stroke Color",
+        subtype='COLOR_GAMMA',
+        size=3,
+        min=0.0,
+        max=1.0,
+        default=(1.0, 1.0, 1.0),
+        update=_redraw,
     )
 
 

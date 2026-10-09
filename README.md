@@ -21,7 +21,7 @@ Requires Blender 4.2 or newer.
 mkdir -p dist && blender --command extension build --source-dir pawst_its --output-dir dist
 ```
 
-Then in Blender, go to *Edit > Preferences > Get Extensions*, open the ▾ menu, choose *Install from Disk…* and pick `dist/pawst_its-2.2.0.zip`.
+Then in Blender, go to *Edit > Preferences > Get Extensions*, open the ▾ menu, choose *Install from Disk…* and pick `dist/pawst_its-2.3.0.zip`.
 
 Upgrading from "Sticky Notes" 1.x: uninstall it first (both use Shift+P). Notes in your existing files convert automatically when you open them, keeping their text, name, color and size. Retired styles become Cat Head.
 
@@ -32,6 +32,7 @@ Upgrading from "Sticky Notes" 1.x: uninstall it first (both use Shift+P). Notes 
 | New note | **Shift+P** over the canvas, or *Add > Layout > Pawst-It* |
 | Edit text | Double-click the note, the right-click menu, or the sidebar's **Edit Text** |
 | Name, color, style, font size | Sidebar (**N**) > **Pawst-Its** tab, or the right-click menu |
+| Outline (stroke) | Sidebar > **Stroke**, then pick a **Stroke Color**: handy on themes where notes are hard to see. Turn it on for all new notes in the add-on preferences |
 | Move / resize / delete / duplicate | Same as any Frame node (G, drag the edges, X, Shift+D) |
 
 While typing:

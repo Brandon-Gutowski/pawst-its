@@ -61,6 +61,8 @@ def create_note(tree, location, body=""):
     props.is_note = True
     props.style = prefs.default_style
     props.font_size = prefs.default_font_size
+    props.use_stroke = prefs.default_use_stroke
+    props.stroke_color = prefs.default_stroke_color
     props.text = bpy.data.texts.new(TEXT_NAME)
     if body:
         props.text.from_string(body)
