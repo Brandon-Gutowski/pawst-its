@@ -171,6 +171,28 @@ def _fit_all():
     return None
 
 
+_detach_pending = False
+
+
+def _detach_all():
+    global _detach_pending
+    _detach_pending = False
+    from .props import attach_fallback_text
+
+    attach_fallback_text(False)
+    tag_redraw_all()
+    return None
+
+
+def _schedule_detach():
+    # A note whose frame still has its Text attached would be drawn twice (by
+    # Blender and by us). Can't write data while drawing, so fix it from a timer.
+    global _detach_pending
+    if not _detach_pending:
+        _detach_pending = True
+        bpy.app.timers.register(_detach_all, first_interval=0.0)
+
+
 def _schedule_fit():
     # Data must not be written from a draw callback, so defer to a timer.
     global _fit_pending
@@ -273,74 +295,54 @@ class _PixelSpace:
         return not (r[2] < -m or r[0] > self.region.width + m or r[3] < -m or r[1] > self.region.height + m)
 
 
-def draw_under():
-    """BACKDROP pass (after the grid, before nodes), in region pixels:
-    the solid body plus anything that sticks out of the frame."""
+def draw_notes():
+    """POST_PIXEL pass, in region pixels. Notes are drawn entirely on top of the
+    node tree, like sticky notes stuck on the screen: shadows first, then each
+    note's selection halo, body, cat features, name and text. The body is
+    opaque, so it also hides Blender's own frame (label, outline, shadow)."""
     context = bpy.context
     tree, notes = _visible_notes(context)
     if not notes:
         return
     _measure_scale(notes)
     px = _PixelSpace(context.region)
+    k = px.k
+    radius = FRAME_RADIUS * k
     theme = context.preferences.themes[0].node_editor
     active = tree.nodes.active
-    visible = []
-    for node in notes:
-        r = px.rect(node)
-        if px.visible(r):
-            visible.append((node, r))
+    visible = [(node, r) for node, r in ((n, px.rect(n)) for n in notes) if px.visible(r)]
+
     silhouettes = []
     for node, r in visible:
-        silhouettes += shapes.silhouette(node.pawst_it.style, r, px.k, FRAME_RADIUS * px.k)
-    shadow_done = _draw_shadows(context.region, px.k, silhouettes)
+        silhouettes += shapes.silhouette(node.pawst_it.style, r, k, radius)
+    shadow_done = _draw_shadows(context.region, k, silhouettes)
 
     gpu.state.blend_set('ALPHA')
+    needs_fit = False
     for node, r in visible:
-        if editing is not None and editing.matches(tree, node):
+        style = node.pawst_it.style
+        color = note_color(node)
+        state = editing if editing is not None and editing.matches(tree, node) else None
+        if state is not None:
             halo = EDIT_ACCENT
         elif node.select:
             halo = (*tuple(theme.node_active if node == active else theme.node_selected)[:3], 1.0)
         else:
             halo = None
-        _fill(shapes.under(
-            node.pawst_it.style, r, px.k, note_color(node), FRAME_RADIUS * px.k, halo, shadow=not shadow_done
-        ))
-    gpu.state.blend_set('NONE')
+        _fill(shapes.under(style, r, k, color, radius, halo, shadow=not shadow_done))
+        _fill([(shapes.margin_cover(style, r, k, radius, FRAME_OUTLINE * px.scale, header_height(node) * k), (*color, 1.0))])
+        _fill(shapes.over(style, r, k, color, radius))
 
-
-def draw_over():
-    """POST_PIXEL pass, in region pixels: decorations on top, body text, caret."""
-    context = bpy.context
-    tree, notes = _visible_notes(context)
-    if not notes:
-        return
-    px = _PixelSpace(context.region)
-    k = px.k
-
-    gpu.state.blend_set('ALPHA')
-    needs_fit = False
-    for node in notes:
-        r = px.rect(node)
-        if not px.visible(r):
-            continue
-        color = note_color(node)
-        _fill([(
-            shapes.margin_cover(
-                node.pawst_it.style, r, k, FRAME_RADIUS * k, FRAME_OUTLINE * px.scale, header_height(node) * k
-            ),
-            (*color, 1.0),
-        )])
-        _fill(shapes.over(node.pawst_it.style, r, k, color, FRAME_RADIUS * k))
-
-        state = editing if editing is not None and editing.matches(tree, node) else None
         text = state.buffer.text if state else None
         text, lines, _m = layout(node, text)
         if state is None and node.pawst_it.auto_height and abs(node.height - fitted_height(node, text)) > 0.5:
             needs_fit = True
-        _draw_text(node, r, k, text, lines, shapes.text_backdrop(node.pawst_it.style, color), state)
+        _draw_text(node, r, k, text, lines, shapes.text_backdrop(style, color), state)
     gpu.state.blend_set('NONE')
     if needs_fit:
         _schedule_fit()
+    if any(node.text is not None for node in notes):
+        _schedule_detach()
 
 
 def _draw_name(node, r, k, fg):
@@ -437,8 +439,7 @@ def tag_redraw_all():
 
 def register():
     space = bpy.types.SpaceNodeEditor
-    _handles.append(space.draw_handler_add(draw_under, (), 'WINDOW', 'BACKDROP'))
-    _handles.append(space.draw_handler_add(draw_over, (), 'WINDOW', 'POST_PIXEL'))
+    _handles.append(space.draw_handler_add(draw_notes, (), 'WINDOW', 'POST_PIXEL'))
 
 
 def unregister():

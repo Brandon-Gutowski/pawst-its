@@ -9,11 +9,12 @@ current drawing space and ``k``, the size of one note unit in that space, so
 the same code serves any zoom level. ``radius`` is the native Frame's corner
 radius in that space.
 
-``under()`` is drawn beneath the native Frame node, which is 80% opaque in the
-note's own color. Wherever a body covers the frame's rounded rectangle the
-frame blends in invisibly, so every body must either match that rounded
-rectangle exactly or fully contain it.
-``over()`` is drawn on top of everything.
+Everything is drawn on top of the node tree, note by note: ``under()``
+(shadow, selection halo, anything that sits *behind* the note such as the
+peeking cat's body, then the opaque note body), ``margin_cover()``, then
+``over()`` (cat features in front of the note). The opaque body also hides
+Blender's own Frame node underneath, which still provides selection, moving
+and resizing.
 """
 
 import math

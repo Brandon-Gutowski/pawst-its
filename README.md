@@ -21,7 +21,7 @@ Requires Blender 4.2 or newer.
 mkdir -p dist && blender --command extension build --source-dir pawst_its --output-dir dist
 ```
 
-Then in Blender, go to *Edit > Preferences > Get Extensions*, open the ▾ menu, choose *Install from Disk…* and pick `dist/pawst_its-2.1.6.zip`.
+Then in Blender, go to *Edit > Preferences > Get Extensions*, open the ▾ menu, choose *Install from Disk…* and pick `dist/pawst_its-2.2.0.zip`.
 
 Upgrading from "Sticky Notes" 1.x: uninstall it first (both use Shift+P). Notes in your existing files convert automatically when you open them, keeping their text, name, color and size. Retired styles become Cat Head.
 
@@ -53,8 +53,7 @@ Each note is an ordinary **Frame node**, which is why moving, selecting, undo, c
 
 When you save, each frame is linked to its Text. Anyone opening the file *without* the add-on still sees every note as a regular frame with its text.
 
-Known limitations:
-- Note text is drawn on top of the canvas, so a node dragged over a note shows the note's text above it.
+Pawst-Its are drawn on top of your nodes, like a sticky note stuck to the screen, so they're always readable. A node sitting underneath a note is hidden until you move one of them.
 
 ## Tests
 

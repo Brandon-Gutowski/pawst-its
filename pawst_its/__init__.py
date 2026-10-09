@@ -41,11 +41,19 @@ def register():
         module.register()
     for handler_list, fn in _handlers:
         handler_list.append(fn)
+    # Blender blocks access to bpy.data while an add-on is being enabled, so
+    # adopt the open file's notes from a timer that runs right afterwards.
+    bpy.app.timers.register(_adopt_open_file, first_interval=0.0)
+
+
+def _adopt_open_file():
     try:
         props.migrate_legacy()
         props.attach_fallback_text(False)
     except AttributeError:
-        pass  # bpy.data is restricted while Blender is starting up; load_post covers it.
+        pass  # still starting up; load_post covers it
+    draw.tag_redraw_all()
+    return None
 
 
 def unregister():

@@ -127,6 +127,12 @@ def main():
     bpy.ops.preferences.addon_disable(module=PKG)
     check(all(n.text is not None for _t, n in notes), "disabling the add-on reattaches fallback text")
 
+    # Updating / re-enabling in the same session must detach again (no doubled text).
+    bpy.ops.preferences.addon_enable(module=PKG)
+    sys.modules[PKG]._adopt_open_file()  # the timer registered by register(); run it now (no event loop headless)
+    check(all(n.text is None for _t, n in notes), "re-enabling the add-on detaches the text again")
+    bpy.ops.preferences.addon_disable(module=PKG)
+
 
 try:
     main()
