@@ -8,10 +8,10 @@ Cat-themed, Houdini-style sticky notes for every node editor: shader, geometry n
 
 Each note has a **name**, a **color** and a cat **style**:
 - **Cat Head**: pointy ears and whiskers
-- **Peeking Cat**: a black cat peeking over the top edge
-- **Paw Print**: a chubby paw pad with toe beans
-- **Cat Loaf**: a loaf with a curled-up tail
-- **Kitty Tail**: little ears and a fluffy tail
+- **Peeking Cat**: a black cat peeking over the top, its round rear end and tail hanging off the bottom
+- **Paw Print**: a chubby paw with claws and toe beans; the text sits on a pink pad
+- **Cat Loaf**: a loaf cat seen from the side: big-eared head on the left, belly running straight into a tail curled up its back
+- **Kitty Tail**: a stretched-out cat whose slim front leg hangs down like a speech-bubble pointer, tail held high
 
 Requires Blender 4.2 or newer.
 
@@ -21,7 +21,7 @@ Requires Blender 4.2 or newer.
 mkdir -p dist && blender --command extension build --source-dir pawst_its --output-dir dist
 ```
 
-Then in Blender, go to *Edit > Preferences > Get Extensions*, open the ▾ menu, choose *Install from Disk…* and pick `dist/pawst_its-2.0.1.zip`.
+Then in Blender, go to *Edit > Preferences > Get Extensions*, open the ▾ menu, choose *Install from Disk…* and pick `dist/pawst_its-2.1.6.zip`.
 
 Upgrading from "Sticky Notes" 1.x: uninstall it first (both use Shift+P). Notes in your existing files convert automatically when you open them, keeping their text, name, color and size. Retired styles become Cat Head.
 

@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "pawst_its"
-version = "2.0.1"
+version = "2.1.6"
 name = "Pawst-Its"
 tagline = "Cat-themed Pawst-Its for every node editor"
 maintainer = "Brandon Gutowski"

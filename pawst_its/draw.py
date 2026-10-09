@@ -8,6 +8,7 @@ import blf
 import bpy
 import gpu
 from gpu_extras.batch import batch_for_shader
+from mathutils import Matrix
 
 from . import shapes
 from .props import is_note, note_body
@@ -192,6 +193,53 @@ def _fill(layers):
         batch.draw(shader)
 
 
+_offscreens = {}  # (width, height) -> GPUOffScreen used as the shadow mask
+
+
+def _shadow_mask(width, height):
+    key = (width, height)
+    if key not in _offscreens:
+        if len(_offscreens) > 4:  # several node editors / resizes: don't hoard GPU memory
+            for old in _offscreens.values():
+                old.free()
+            _offscreens.clear()
+        _offscreens[key] = gpu.types.GPUOffScreen(width, height)
+    return _offscreens[key]
+
+
+def _draw_shadows(region, k, silhouettes):
+    """Draw every note's drop shadow from one opaque mask, so places where a
+    cat's pieces overlap (tail on body, round caps...) aren't darkened twice.
+    Returns False if off-screen drawing isn't available."""
+    w, h = region.width, region.height
+    if not silhouettes or w < 1 or h < 1:
+        return True
+    try:
+        mask = _shadow_mask(w, h)
+    except Exception:
+        return False
+    pixel_space = Matrix(((2.0 / w, 0, 0, -1.0), (0, 2.0 / h, 0, -1.0), (0, 0, 1.0, 0), (0, 0, 0, 1.0)))
+    flat = gpu.shader.from_builtin('UNIFORM_COLOR')
+    with mask.bind():
+        gpu.state.active_framebuffer_get().clear(color=(0.0, 0.0, 0.0, 0.0))
+        with gpu.matrix.push_pop(), gpu.matrix.push_pop_projection():
+            gpu.matrix.load_matrix(Matrix.Identity(4))
+            gpu.matrix.load_projection_matrix(pixel_space)
+            gpu.state.blend_set('NONE')
+            flat.uniform_float("color", (1.0, 1.0, 1.0, 1.0))
+            batch_for_shader(flat, 'TRIS', {"pos": silhouettes}).draw(flat)
+    image = gpu.shader.from_builtin('IMAGE_COLOR')
+    gpu.state.blend_set('ALPHA')
+    for dx, dy, alpha in shapes.SHADOW_LAYERS:
+        ox, oy = dx * k, dy * k
+        quad = ((ox, oy), (ox + w, oy), (ox + w, oy + h), (ox, oy + h))
+        batch = batch_for_shader(image, 'TRI_FAN', {"pos": quad, "texCoord": ((0, 0), (1, 0), (1, 1), (0, 1))})
+        image.uniform_sampler("image", mask.texture_color)
+        image.uniform_float("color", (*shapes.SHADOW, alpha))
+        batch.draw(image)
+    return True
+
+
 def _visible_notes(context):
     space = context.space_data
     tree = getattr(space, "edit_tree", None)
@@ -236,18 +284,27 @@ def draw_under():
     px = _PixelSpace(context.region)
     theme = context.preferences.themes[0].node_editor
     active = tree.nodes.active
-    gpu.state.blend_set('ALPHA')
+    visible = []
     for node in notes:
         r = px.rect(node)
-        if not px.visible(r):
-            continue
+        if px.visible(r):
+            visible.append((node, r))
+    silhouettes = []
+    for node, r in visible:
+        silhouettes += shapes.silhouette(node.pawst_it.style, r, px.k, FRAME_RADIUS * px.k)
+    shadow_done = _draw_shadows(context.region, px.k, silhouettes)
+
+    gpu.state.blend_set('ALPHA')
+    for node, r in visible:
         if editing is not None and editing.matches(tree, node):
             halo = EDIT_ACCENT
         elif node.select:
             halo = (*tuple(theme.node_active if node == active else theme.node_selected)[:3], 1.0)
         else:
             halo = None
-        _fill(shapes.under(node.pawst_it.style, r, px.k, note_color(node), FRAME_RADIUS * px.k, halo))
+        _fill(shapes.under(
+            node.pawst_it.style, r, px.k, note_color(node), FRAME_RADIUS * px.k, halo, shadow=not shadow_done
+        ))
     gpu.state.blend_set('NONE')
 
 
@@ -280,7 +337,7 @@ def draw_over():
         text, lines, _m = layout(node, text)
         if state is None and node.pawst_it.auto_height and abs(node.height - fitted_height(node, text)) > 0.5:
             needs_fit = True
-        _draw_text(node, r, k, text, lines, color, state)
+        _draw_text(node, r, k, text, lines, shapes.text_backdrop(node.pawst_it.style, color), state)
     gpu.state.blend_set('NONE')
     if needs_fit:
         _schedule_fit()
@@ -391,3 +448,6 @@ def unregister():
         bpy.types.SpaceNodeEditor.draw_handler_remove(handle, 'WINDOW')
     _handles.clear()
     _layout_cache.clear()
+    for mask in _offscreens.values():
+        mask.free()
+    _offscreens.clear()
